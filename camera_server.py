@@ -3,11 +3,14 @@
 import socket
 import threading
 import pickle
+import camera_client
 
 class CameraServer():
-    
+    RECV_BLOCKING_TIMEOUT = 0.25 # seconds
+    CONFIG_FILE = 'camera.cfg'
+
     def __init__(self):
-        self.listen_port = 0 #51234
+        self.listen_port = 51235 #51234
         self.server_socket = socket.socket()
         self.max_connections = 100
         self.cameras = {}
@@ -22,6 +25,7 @@ class CameraServer():
         self.await_connections()
 
     def new_connection(self, client):
+        client.settimeout(CameraServer.RECV_BLOCKING_TIMEOUT) # timeout blocking operations
         data = pickle.loads(client.recv(2048))
         name = data['name']
         left = data['left']
@@ -29,12 +33,12 @@ class CameraServer():
         
         print('Connected to %s'%name)
         self.cameras[name] = client
-        client.send(bytes('Welcome to the network, %s'%name, 'utf-8'))
+        client.send(pickle.dumps('Welcome to the network, %s'%name))
         while True:
             # Acquire a lock on the alert list
             self.alert_list_lock.acquire()
             # See if this client is in the list of cameras to be alerted
-            if name in list(zip(*self.alert_list))[0]:
+            if len(self.alert_list) > 0 and name in list(zip(*self.alert_list))[0]:
                 # get index of camera in the list
                 idx = list(zip(*self.alert_list))[0].index(name)
                 data = {
@@ -47,6 +51,15 @@ class CameraServer():
                 del self.alert_list[idx]
             # Release the mutex
             self.alert_list_lock.release()
+            # Check if client sent an alert
+            try:
+                alert = pickle.loads(client.recv(4096))
+                print('Received alert of type:',alert['type'])
+            except socket.timeout:
+                pass
+            except BaseException as e:
+                print(type(e),e)
+
         client.close()
 
 

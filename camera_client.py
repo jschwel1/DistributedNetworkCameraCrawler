@@ -3,10 +3,20 @@ import socket
 import threading
 import sys
 import pickle
+import time
+import queue
 
 
 class CameraClient():
     CONFIG_FILE = 'camera.cfg'
+    SOCKET_BLOCKING_TIMEOUT = 0.25 # seconds
+    LEFT = 0
+    RIGHT = 1
+    MISSING_TIMEOUT = 3 # seconds
+    LEAVE_ALERT = 0
+    FOUND_ALERT = 1
+    MISSING_ALERT = 2
+    QUITTING_ALERT = 3
 
     def __init__(self, cfg=CONFIG_FILE, basics=None):
         if basics is not None:
@@ -15,11 +25,40 @@ class CameraClient():
             self.name = basics['name']
             self.left = basics['left']
             self.right = basics['right']
+            self.right_access = basics['right_access']
+            self.left_access = basics['left_access']
         else:
             self.initialize_with_file(cfg)
 
+        self.expected_from_left = []
+        self.expected_from_right = []
+        self.should_shutdown = False
+
+        self.send_queue = queue.Queue()
+
+        self.expected_from_right_mutex = threading.Lock()
+        self.expected_from_left_mutex = threading.Lock()
+        
         self.socket = socket.socket()
+        self.socket.settimeout(CameraClient.SOCKET_BLOCKING_TIMEOUT)
         self.open_connection()
+
+    def entered_screen_alert(self, side):
+        pass
+
+    def left_screen_alert(self, side):
+        '''
+        When an object leaves the screen, it should call this method.
+        '''
+        print('Someone just left')
+        data = {
+            'type': CameraClient.LEAVE_ALERT,
+            'time': time.time(),
+            'cam': self.name,
+            'side': side,
+        }
+        self.send_queue.put(data)
+
 
     def initialize_with_file(self, filepath=CONFIG_FILE):
         try:
@@ -34,6 +73,8 @@ class CameraClient():
             self.name = config['name']
             self.left = config['left'].split(',')
             self.right = config['right'].split(',')
+            self.right_access = config['right_access']
+            self.left_access = config['left_access']
         except BaseException as e:
             print(type(e), e)
             print("INCOMPLETE CONFIG FILE")
@@ -64,12 +105,22 @@ class CameraClient():
             'left': self.left,
             'right': self.right,
         }
+        # Inform server about this camera
         self.socket.send(pickle.dumps(info))
-        print(str(self.socket.recv(2048), 'utf-8'))
-        while True:
-            msg = pickle.loads(self.socket.recv(2048))
-            if (msg != ''):
-                print(msg)
+        while not self.should_shutdown:
+            if not self.send_queue.empty():
+                data = self.send_queue.get()
+                self.socket.send(pickle.dumps(data))
+                print('just let the server know: ',data)
+            try:
+                msg = pickle.loads(self.socket.recv(2048))
+                if (msg != ''):
+                    print(msg)
+            except socket.timeout:
+                pass
+            except BaseException as e:
+                print(type(e), e)
+
         self.socket.close()
 
     def open_connection(self):
@@ -78,33 +129,23 @@ class CameraClient():
         print('Connected to %s on port %s' % (self.server_ip, self.server_port))
         threading.Thread(target=self.socket_thread).start()
 
+    def shutdown(self):
+        self.should_shutdown = True
+
 
 
 if __name__=='__main__':
     print('Starting camera...')
-    cc = CameraClient(basics={'name':'C1','left':'c2','right':'c3,c4'})
-    '''
-    names = {
-        'N':{
-            'l':['W'],
-            'r':['E'],
-        },
-        'E':{
-            'l':['N'],
-            'r':['S'],
-        },
-        'S':{
-            'l':['E'],
-            'r':['W'],
-        },
-        'W':{
-            'l':['W'],
-            'r':['N'],
-        },
-    }
-    cl = []
-    for i in names:
-        print('%s )'%i)
-        cl.append(CameraClient(i, names[i]['l'], names[i]['r']))
-    '''
-    
+    #cc = CameraClient(basics={'name':'C1','left':'c2','right':'c3,c4'})
+    cc = CameraClient()
+    while True:
+        inpt = input()
+        if (inpt == 'l'):
+            cc.left_screen_alert(CameraClient.LEFT)
+        elif (inpt == 'r'):
+            cc.left_screen_alert(CameraClient.RIGHT)
+        elif (inpt == 'q'):
+            cc.shutdown()
+            break
+
+
