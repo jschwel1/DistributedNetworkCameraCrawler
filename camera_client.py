@@ -25,8 +25,8 @@ class CameraClient():
             self.name = basics['name']
             self.left = basics['left']
             self.right = basics['right']
-            self.right_access = basics['right_access']
-            self.left_access = basics['left_access']
+            self.left_endpoint = basics['left_endpoint']
+            self.right_endpoint = basics['right_endpoint']
         else:
             self.initialize_with_file(cfg)
 
@@ -73,8 +73,8 @@ class CameraClient():
             self.name = config['name']
             self.left = config['left'].split(',')
             self.right = config['right'].split(',')
-            self.right_access = config['right_access']
-            self.left_access = config['left_access']
+            self.left_endpoint = bool(config['left_endpoint'])
+            self.right_endpoint = bool(config['right_endpoint'])
         except BaseException as e:
             print(type(e), e)
             print("INCOMPLETE CONFIG FILE")
