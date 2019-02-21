@@ -118,6 +118,9 @@ class CameraClient():
                     print(msg)
             except socket.timeout:
                 pass
+            except EOFError as e:
+                print('Lost connection to server')
+                break
             except BaseException as e:
                 print(type(e), e)
 
