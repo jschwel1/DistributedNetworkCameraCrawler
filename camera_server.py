@@ -16,9 +16,6 @@ class CameraServer():
         self.listen_ip = '127.0.0.1'
         self.server_socket = socket.socket()
         self.max_connections = 100
-        self.cameras = {}
-        self.alert_list = [] # list of tuples of alerts: [(who, from, side), (who, from, side), ...]
-        self.alert_list_lock = threading.Lock()
         self.camera_alerts = {}
         self.shutdown_server = False
 
@@ -49,7 +46,6 @@ class CameraServer():
             print('Already connected to %s'%name)
             client.send(pickle.dumps('I have already been connected to someone with the same name. If this is unexpected, please change IDs and try again'))
 
-        self.cameras[name] = client
         client.send(pickle.dumps('Welcome to the network, %s'%name))
         while not should_shutdown_client and not self.shutdown_server:
             # Send out any pending alerts to the client

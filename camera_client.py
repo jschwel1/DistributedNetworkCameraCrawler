@@ -30,8 +30,8 @@ class CameraClient():
         else:
             self.initialize_with_file(cfg)
 
-        self.expected_from_left = []
-        self.expected_from_right = []
+        self.expected_from_left = queue.Queue() # list of alerts from the left side
+        self.expected_from_right = queue.Queue() # list of alerts from the right side
         self.should_shutdown = False
 
         self.send_queue = queue.Queue()
