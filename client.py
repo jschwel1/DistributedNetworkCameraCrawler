@@ -15,10 +15,11 @@ class Client():
     RIGHT = 1
     MISSING_TIMEOUT = 3 # seconds
     LEAVE_ALERT = 0
-    FOUND_ALERT = 1
-    MISSING_ALERT = 2
-    QUITTING_ALERT = 3
-    UNEXPECTED_ENTRANCE_ALERT = 4
+    FOUND_NOTIFY = 1
+    FOUND_BROADCAST = 2
+    MISSING_ALERT = 3
+    QUITTING_ALERT = 4
+    UNEXPECTED_ENTRANCE_ALERT = 5
 
     def __init__(self, cfg=CONFIG_FILE):
 
@@ -28,8 +29,8 @@ class Client():
         self.send_dict = {}
         self.peer_connections = []
         self.peer_connections_mutex = threading.Lock()
-        self.peers = {} # client object as key, queue.Queue as value
-        self.peers_mutex = threading.Lock()
+        self.peer_alerts = {} # client object as key, queue.Queue as value
+        self.peer_alerts_mutex = threading.Lock()
         self.should_shutdown = False
         self.initialize_with_file(cfg)
         self.max_connections = 2*len(self.peer_connections)
@@ -40,6 +41,7 @@ class Client():
         self.server_socket.listen(0)
 
         self.p2p_id = uuid.uuid4() # generate a random UUID
+        print('This peer is: ', self.p2p_id)
  
         # Accept all incoming connection requests
         threading.Thread(target=self.await_connections).start()
@@ -49,8 +51,6 @@ class Client():
         for peer in self.peer_connections:
             threading.Thread(target=self.initiate_connection, args=(peer,)).start()
         self.peer_connections_mutex.release()
-
-#        self.open_connection()
 
 
     def await_connections(self):
@@ -86,20 +86,28 @@ class Client():
         and the client will listen. Whoever has the lower UUID will
         drop the server connection. (server_uuid > client_uuid)
         '''
-        print('Set up connection, I am the', 'server' if is_server else 'client')
         if is_server:
-            client_uuid=pickle.loads(sock.recv(1024))
+            peer_id=pickle.loads(sock.recv(1024))
             sock.send(pickle.dumps(self.p2p_id))
-            if client_uuid > self.p2p_id:
+            if peer_id > self.p2p_id:
                 sock.close()
                 print('closing server connection')
+                return
         else:
             sock.send(pickle.dumps(self.p2p_id))
-            server_uuid=pickle.loads(sock.recv(1024))
-            if server_uuid < self.p2p_id:
+            peer_id=pickle.loads(sock.recv(1024))
+            if peer_id < self.p2p_id:
                 sock.close()
                 print('closing client connection')
-
+                return
+        # Sock is now the only communications socket for this connection
+        self.peer_alerts_mutex.acquire()
+        self.peer_alerts[peer_id]=queue.Queue()
+        self.peer_alerts_mutex.release()
+         
+        print('Set up connection, I am the', 'server' if is_server else 'client')
+        print('Successfully connected to ', peer_id)
+        self.socket_thread(sock, peer_id)
         sock.close()
             
             
@@ -167,7 +175,33 @@ class Client():
                 config[key] = val
         return config
 
-    def socket_thread(self, conn):
+    def socket_thread(self, conn, peer_id):
+        while not self.should_shutdown:
+            # see if there is anything outbound for this peer
+            self.peer_alerts_mutex.acquire()
+            data=None
+            try:
+                data=self.peer_alerts[peer_id].get(block=False)
+            except queue.Empty as e:
+                pass
+            self.peer_alerts_mutex.release()
+            if data is not None:
+                conn.send(pickle.dumps(data))
+
+            # Try reading incoming messages
+            try:
+                msg = pickle.loads(conn.recv(2048))
+                if msg != '':
+                    pass
+            except socket.timeout:
+                pass
+            except EOFError as e:
+                print('Lost connection to peer')
+                break
+            except BaseException as e:
+                print(type(e), e)
+
+
         conn.close()
 
     def shutdown(self):
