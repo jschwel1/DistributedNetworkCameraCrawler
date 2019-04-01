@@ -17,6 +17,7 @@ class CameraClient():
     FOUND_ALERT = 1
     MISSING_ALERT = 2
     QUITTING_ALERT = 3
+    UNEXPECTED_ENTRANCE_ALERT = 4
 
     def __init__(self, cfg=CONFIG_FILE, basics=None):
         if basics is not None:
@@ -36,15 +37,43 @@ class CameraClient():
 
         self.send_queue = queue.Queue()
 
-        self.expected_from_right_mutex = threading.Lock()
-        self.expected_from_left_mutex = threading.Lock()
-        
         self.socket = socket.socket()
         self.socket.settimeout(CameraClient.SOCKET_BLOCKING_TIMEOUT)
         self.open_connection()
 
-    def entered_screen_alert(self, side):
+    def send_unknown_entrance_alert(self, side):
+        data = {
+            'type': CameraClient.UNEXPECTED_ENTRANCE_ALERT,
+            'time': time.time(),
+            'cam': self.name,
+            'side': side,
+        }
+        self.send_queue.put(data)
+
+
+    def send_found_alert(self, alert):
         pass
+
+    def entered_screen_alert(self, side):
+        '''
+        If someone enters the screen, check if this is an access point. If not,
+        ensure that it is expecting someone, then alert that server that someone
+        has been found.
+        '''
+        if (side == CameraClient.RIGHT and self.right_endpoint) or\
+           (side == CameraClient.LEFT and self.left_endpoint):
+            pass # okay for people to enter
+        elif side == CameraClient.RIGHT:
+            if (self.expected_from_right.empty()):
+                self.send_unknown_entrance_alert(side)
+            else:
+                self.send_found_alert(self.expected_from_right.get())
+        elif side == CameraClient.LEFT:
+            if (self.expected_from_left.empty()):
+                self.send_unknown_entrance_alert(side)
+            else:
+                self.send_found_alert(self.expected_from_left.get())
+                
 
     def left_screen_alert(self, side):
         '''

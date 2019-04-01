@@ -27,6 +27,24 @@ class CameraServer():
         # start a new thread to wait for connections
         threading.Thread(target=self.await_connections).start()
         
+    def process_alerts(self, alert):
+        response = None
+        if alert['type'] is CameraClient.LEAVE_ALERT:
+            response = self.process_leave_alert(alert)
+
+        return response
+
+    def process_leave_alert(self, alert):
+        pass
+
+    def process_found_alert(self, alert):
+        pass
+
+    def process_missing_alert(self, alert):
+        pass
+
+    def process_unexpected_entrance_alert(self, alert):
+        pass
 
     def new_connection(self, client):
         # Set a timeout for the connection
@@ -39,6 +57,7 @@ class CameraServer():
         should_shutdown_client = False
 
         print('Connected to %s'%name)
+        print('client is ', client);
         # Add the camera to the dictionary
         if name not in self.camera_alerts:
             self.camera_alerts[name] = queue.Queue()
@@ -59,6 +78,7 @@ class CameraServer():
             try:
                 alert = pickle.loads(client.recv(4096))
                 print('Received alert ',alert)
+                response = self.process_alerts(alert)
                 if alert['type'] is CameraClient.LEAVE_ALERT:
                     if alert['side'] == CameraClient.LEFT:
                         cams_to_alert = left
