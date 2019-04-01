@@ -3,7 +3,7 @@
 CONFIG=configs.cfg
 CAM_CONFIG=camera.cfg
 IFS="="
-CAMERA_CLIENT_PY=camera_client.py
+CAMERA_CLIENT_PY=client.py
 
 camName=""
 serverIP=""
@@ -36,5 +36,10 @@ do
     elif [ "$key" = "right" ]
     then
         echo "right=$val" >> $camName/$CAM_CONFIG
+    elif [ "$key" = "" ]
+    then
+        echo ""
+    else
+        echo "$key=$val" >> $camName/$CAM_CONFIG
     fi
 done < $CONFIG
