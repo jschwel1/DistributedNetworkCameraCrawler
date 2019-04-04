@@ -155,8 +155,13 @@ class Client():
         from_id = self.expected_objects[obj_id]
         del self.expected_objects[obj_id]
 
-        print('Found %s, letting %s know...'%(str(obj_id), str(from_id)))
-        self.send_alert(self.buildAlert(from_id, Client.FOUND_NOTIFY, obj_id))
+        # If the camera that sent the initial request (this one) also finds the missing object first,
+        # only send the broadcast message
+        if from_id == self.p2p_id:
+            self.send_broadcast_found_notify(obj_id)
+        else:  
+            print('Found %s, letting %s know...'%(str(obj_id), str(from_id)))
+            self.send_alert(self.buildAlert(from_id, Client.FOUND_NOTIFY, obj_id))
 
     def entered_screen_alert(self, obj_id):
         pass
@@ -167,6 +172,8 @@ class Client():
         self.missing_objects_mutex.acquire()
         self.missing_objects[obj_id] = {'time':time.time(), 'alerted':False}
         self.missing_objects_mutex.release()
+        if obj_id not in self.expected_objects:
+            self.expected_objects[obj_id] = self.p2p_id;
 
     def send_alert(self, alert):
         self.peer_connections_mutex.acquire()
@@ -233,6 +240,19 @@ class Client():
         }
         return alert
         
+    def send_broadcast_found_notify(self, obj_id):
+        self.send_alert(self.buildAlert(Client.BROADCAST_MSG, Client.FOUND_BROADCAST, obj_id))
+        self.missing_objects_mutex.acquire()
+        if obj_id in self.missing_objects:
+            # Check that it the server wasn't notified
+            if self.missing_objects[obj_id]['alerted']:
+                server_alert = self.buildAlert(self.alert_server_id, Client.DISREGARD_MISSING_ALERT, obj_id, self.missing_objects[obj_id])
+                self.send_server_alert(server_alert)
+
+            del self.missing_objects[obj_id]
+        self.missing_objects_mutex.release()
+
+
     def handleAlert(self, alert):
         if alert['to'] != self.p2p_id and alert['to'] != Client.BROADCAST_MSG:
             return None
@@ -249,6 +269,8 @@ class Client():
         # someone is responding to a LEAVE_ALERT, stating they found someone.
         # notify all neighbors that the person was found.
         elif alert['type'] == Client.FOUND_NOTIFY:
+            self.send_broadcast_found_notify(alert['obj'])
+            '''
             self.send_alert(self.buildAlert(Client.BROADCAST_MSG, Client.FOUND_BROADCAST, alert['obj']))
             self.missing_objects_mutex.acquire()
             if alert['obj'] in self.missing_objects:
@@ -259,6 +281,7 @@ class Client():
  
                 del self.missing_objects[alert['obj']]
             self.missing_objects_mutex.release()
+            '''
             
 
         # If a found broadcast is received, someone who was previously expected has been found.
