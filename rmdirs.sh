@@ -16,6 +16,10 @@ do
     then
         echo "Removing $val directory recursively"
         rm -r $val
+    elif [ "$key" = "server" ]
+    then
+        echo "Removing $val directory recursively"
+        rm -r $val
     fi
 
 done < $CONFIG
