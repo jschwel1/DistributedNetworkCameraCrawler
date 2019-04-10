@@ -94,7 +94,7 @@ class AlertServer():
         elif alert['type'] == Client.MISSING_ALERT:
             print('WARNING: %s is missing! Last seen from camera: %s at %s'%(str(alert['obj']), str(alert['from']), str(alert['extra']['time'])))
         elif alert['type'] == Client.UNEXPECTED_ENTRANCE_ALERT:
-            print('WARNING: %s unexpected entered at %s at %s'%(str(alert['obj']), str(alert['from']), str(alert['extra']['time'])))
+            print('WARNING: %s unexpectedly entered at %s at %s'%(str(alert['obj']), str(alert['from']), str(alert['time'])))
         elif alert['type'] == Client.DISREGARD_MISSING_ALERT:
             print('DISREGARD: %s was found. Original alert from %s' % (str(alert['obj']), str(alert['from'])))
 

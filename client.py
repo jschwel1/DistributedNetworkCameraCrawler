@@ -149,23 +149,26 @@ class Client():
             
 
     def send_unknown_entrance_alert(self, obj_id):
-        pass
+        # notify the server of an unknown entrace
+        server_alert = self.buildAlert(self.alert_server_id, Client.UNEXPECTED_ENTRANCE_ALERT, obj_id)
+        self.send_server_alert(server_alert)
+        
 
     def send_found_alert(self, obj_id):
-        from_id = self.expected_objects[obj_id]
-        del self.expected_objects[obj_id]
+        if obj_id in self.expected_objects:
+            from_id = self.expected_objects[obj_id]
+            del self.expected_objects[obj_id]
 
-        # If the camera that sent the initial request (this one) also finds the missing object first,
-        # only send the broadcast message
-        if from_id == self.p2p_id:
-            self.send_broadcast_found_notify(obj_id)
-        else:  
-            print('Found %s, letting %s know...'%(str(obj_id), str(from_id)))
-            self.send_alert(self.buildAlert(from_id, Client.FOUND_NOTIFY, obj_id))
+            # If the camera that sent the initial request (this one) also finds the missing object first,
+            # only send the broadcast message
+            if from_id == self.p2p_id:
+                self.send_broadcast_found_notify(obj_id)
+            else:  
+                print('Found %s, letting %s know...'%(str(obj_id), str(from_id)))
+                self.send_alert(self.buildAlert(from_id, Client.FOUND_NOTIFY, obj_id))
+        else:
+            self.send_unknown_entrance_alert(obj_id)
 
-    def entered_screen_alert(self, obj_id):
-        pass
-               
 
     def left_screen_alert(self, obj_id):
         self.send_alert(self.buildAlert(Client.BROADCAST_MSG, Client.LEAVE_ALERT, obj_id))
