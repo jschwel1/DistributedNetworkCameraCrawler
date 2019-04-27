@@ -193,18 +193,27 @@ class Client():
         try:
             self.server_ip = config['server_ip']
             self.server_port = int(config['server_port'])
-            self.listen_port = int(config['listen_port'])
-            self.listen_ip = config['listen_ip']
+#            self.listen_port = int(config['listen_port'])
+#            self.listen_ip = config['listen_ip']
             self.name = config['name']
             self.left_endpoint = bool(config['left_endpoint'])
             self.right_endpoint = bool(config['right_endpoint'])
+            cam_info = config[self.name]
+            cam_info = re.match('\((?P<ip>\d+\.\d+\.\d+\.\d+),(?P<port>\d+)\)', cam_info)
+            self.listen_ip = cam_info.group('ip')
+            self.listen_port = int(cam_info.group('port'))
             # Add in the neighboring cameras
             neighbors = config['neighbors']
             for neighbor in neighbors.split(';'):
-                temp = re.match('\((?P<ip>\d+\.\d+\.\d+\.\d+),(?P<port>\d+),(?P<side>\w)\)', neighbor)
+#                temp = re.match('\((?P<ip>\d+\.\d+\.\d+\.\d+),(?P<port>\d+),(?P<side>\w)\)', neighbor)
+                temp = re.match('\((?P<cam_name>[a-zA-Z0-9_]+),(?P<side>[lr])\)', neighbor)
+                cam_info = re.match('\((?P<ip>\d+\.\d+\.\d+\.\d+),(?P<port>\d+)\)', config[temp.group('cam_name')])
+                
+                
+
                 self.peer_connections.append({
-                    'ip': temp.group('ip'),
-                    'port': int(temp.group('port')),
+                    'ip': cam_info.group('ip'),
+                    'port': int(cam_info.group('port')),
                     'side': temp.group('side'),
                     'connected': False,
                 })
