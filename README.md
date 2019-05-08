@@ -18,24 +18,34 @@ server_port=server port
 ```
 so that each client can know the address of the alert server.
 
+The following line instructs `builddirs.sh` to make a directory for the alert server:
+`server=alertServer`
+
+Next, a list of cameras is defined by a tuple of IP addresses and ports. The list must exist between the lines `cameras=_` and `end_cameras=_`. and each camera must be on its own line. For example:
+```
+cameras=_
+client0=('192.168.1.3',51236)
+client1=('192.168.1.4',51236)
+client2=('192.168.1.5',51236)
+client3=('192.168.1.6',51236)
+end_cameras=_
+```
+
 After that each client is started by stating the name
 
 `name=ClientName`
 
-followed by a list of neighbors, whether or not it is an endpoint (e.g. door or other entry way) and the port and ip it will be listening on. These can be specified in any order. The endpoints are just boolean values. The neighbors list is a list of semicolon-separated 3-tuples in the format (ip,port,side), where side is l or r.
+followed by a list of neighbors and whether or not it is an endpoint (e.g. door or other entry way). These can be specified in any order. The endpoints are written as Python boolean values (True/False). The neighbors list is a list of semicolon-separated tuples in the format (<camera_name>,side), where side is l or r.
 For example:
 ```
-name=Client1
-neighbors=(127.0.0.1,51239,l);(127.0.0.1,51237,r)
+name=client1
+neighbors=(client0,l);(client2,r)
 right_endpoint=False
 left_endpoint=False
-listen_port=51236
-listen_ip=127.0.0.1
 ```
 
-In order to make a directory for the alert server, simply use the line:server=alertServerName
 
-Once the configuration file is complete, simply running the builddirs.sh command will parse the configuration file and create directories with the required files.
+Once the configuration file is complete, simply running the `builddirs.sh` command will parse the configuration file and create directories with the required files.
 
 
 ## Running:
