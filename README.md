@@ -22,7 +22,7 @@ The following line instructs `builddirs.sh` to make a directory for the alert se
 
 `server=alertServer`
 
-Next, a list of cameras is defined by a tuple of IP addresses and ports. The list must exist between the lines `cameras=_` and `end_cameras=_`. and each camera must be on its own line. For example:
+Next, a list of cameras is defined by a tuple of IP addresses and ports. The list must exist between the lines `cameras=_` and `end_cameras=_` and each camera must be on its own line. For example:
 ```
 cameras=_
 client0=('192.168.1.3',51236)
@@ -88,3 +88,5 @@ The current keyboard commands are:
 
 >q=>quit
 
+### Running with different triggers
+To replace the manual keystrokes as triggers for users entering or leaving the screen, the detector must identify the individual with some unique integer and call the Client object's `left_screen_alert(<individual's_id>)` or `send_found_alert(<individual's_id>)` if a user left or entered the camera's view, respectively.
