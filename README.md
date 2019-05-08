@@ -19,6 +19,7 @@ server_port=server port
 so that each client can know the address of the alert server.
 
 The following line instructs `builddirs.sh` to make a directory for the alert server:
+
 `server=alertServer`
 
 Next, a list of cameras is defined by a tuple of IP addresses and ports. The list must exist between the lines `cameras=_` and `end_cameras=_`. and each camera must be on its own line. For example:
@@ -45,9 +46,27 @@ left_endpoint=False
 ```
 
 
-Once the configuration file is complete, simply running the `builddirs.sh` command will parse the configuration file and create directories with the required files.
+Once the configuration file is complete, simply running the `builddirs.sh` command will parse the configuration file and create directories with the required files. Each camera specified should then have its own directory with a copy of `client.py` and `camera.cfg`. The alert server directory should have those two files as well as `alertServer.py`.
 
+If building `camera.cfg` files manually, they will look like this:
+```
+# Locate alert server
+server_ip='ip address of the server'
+server_port=<server_port>
 
+# List all available cameras (or the ones necessary 
+# for this camera to connect to)
+client0=('192.168.1.3',51236)
+client1=('192.168.1.4',51236)
+client2=('192.168.1.5',51236)
+client3=('192.168.1.6',51236)
+
+# Define this camera and its settings
+name=client1
+neighbors=(client0,l);(client2,r)
+right_endpoint=False
+left_endpoint=True
+```
 ## Running:
 To run this system, the alert server must be started first. With all the configuration files set up, the alert server can be started via command line with `./alertServer`.
 
